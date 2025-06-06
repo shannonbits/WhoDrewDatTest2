@@ -3,17 +3,1089 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhoDrewDat - The Drawing & Guessing Game</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+    <title>WhoDrewDat - Multiplayer Drawing Game</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Auth Screen */
+        .auth-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .auth-form {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .auth-form h2 {
+            margin-top: 0;
+            text-align: center;
+        }
+        
+        .auth-form input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .auth-form button {
+            width: 100%;
+            padding: 12px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        .auth-form button:hover {
+            background-color: #3367d6;
+        }
+        
+        .auth-switch {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        .auth-switch a {
+            color: #4285f4;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        /* Lobby Screen */
+        .lobby-screen {
+            display: none;
+        }
+        
+        .lobby-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .lobby-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .lobby-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .lobby-card h3 {
+            margin-top: 0;
+        }
+        
+        .lobby-card button {
+            width: 100%;
+            padding: 8px;
+            background-color: #34a853;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        /* Game Screen */
+        .game-screen {
+            display: none;
+        }
+        
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .game-canvas-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        #drawing-canvas {
+            background: white;
+            border: 1px solid #ddd;
+            cursor: crosshair;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .game-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .guess-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .guess-container input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .guess-container button {
+            padding: 10px 20px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .players-list {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .player-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ddd;
+            margin-right: 10px;
+            overflow: hidden;
+        }
+        
+        .player-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .player-info {
+            flex-grow: 1;
+        }
+        
+        .player-score {
+            font-weight: bold;
+        }
+        
+        /* Profile Screen */
+        .profile-screen {
+            display: none;
+        }
+        
+        .profile-form {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .avatar-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #ddd;
+            margin: 0 auto 20px;
+            overflow: hidden;
+        }
+        
+        .avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        /* Toolbar */
+        .toolbar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 10px;
+            border-radius: 50px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .tool-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .color-picker {
+            width: 40px;
+            height: 40px;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+        }
+        
+        .size-picker {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            #drawing-canvas {
+                width: 100%;
+                height: auto;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div id="app">
-        <!-- Content will be dynamically loaded here -->
+    <!-- Auth Screen -->
+    <div class="auth-screen" id="auth-screen">
+        <div class="auth-form" id="login-form">
+            <h2>Login</h2>
+            <input type="email" id="login-email" placeholder="Email">
+            <input type="password" id="login-password" placeholder="Password">
+            <button id="login-button">Login</button>
+            <div class="auth-switch">
+                Don't have an account? <a id="switch-to-signup">Sign up</a>
+            </div>
+        </div>
+        
+        <div class="auth-form" id="signup-form" style="display: none;">
+            <h2>Sign Up</h2>
+            <input type="text" id="signup-username" placeholder="Username">
+            <input type="email" id="signup-email" placeholder="Email">
+            <input type="password" id="signup-password" placeholder="Password">
+            <button id="signup-button">Sign Up</button>
+            <div class="auth-switch">
+                Already have an account? <a id="switch-to-login">Login</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lobby Screen -->
+    <div class="container lobby-screen" id="lobby-screen">
+        <div class="lobby-header">
+            <h1>WhoDrewDat</h1>
+            <div>
+                <button id="create-lobby-button">Create Lobby</button>
+                <button id="profile-button">Profile</button>
+                <button id="logout-button">Logout</button>
+            </div>
+        </div>
+        
+        <h2>Available Lobbies</h2>
+        <div class="lobby-list" id="lobby-list">
+            <!-- Lobbies will be added here dynamically -->
+        </div>
+    </div>
+    
+    <!-- Game Screen -->
+    <div class="container game-screen" id="game-screen">
+        <div class="game-header">
+            <h1>WhoDrewDat</h1>
+            <div id="game-info">
+                Round: <span id="current-round">1</span>/<span id="total-rounds">5</span>
+                | Time: <span id="timer">60</span>s
+            </div>
+        </div>
+        
+        <div class="game-canvas-container">
+            <canvas id="drawing-canvas" width="800" height="500"></canvas>
+        </div>
+        
+        <div class="game-controls">
+            <div id="word-display" style="text-align: center; margin-bottom: 15px; font-size: 24px;"></div>
+            <div class="guess-container">
+                <input type="text" id="guess-input" placeholder="Your guess...">
+                <button id="submit-guess">Submit</button>
+            </div>
+            <div id="message-area" style="text-align: center; color: #34a853;"></div>
+        </div>
+        
+        <div class="players-list">
+            <h2>Players</h2>
+            <div id="players-list">
+                <!-- Players will be added here dynamically -->
+            </div>
+        </div>
+        
+        <div class="toolbar" id="toolbar" style="display: none;">
+            <input type="color" id="color-picker" class="color-picker" value="#000000">
+            <select id="size-picker" class="size-picker">
+                <option value="2">2px</option>
+                <option value="5" selected>5px</option>
+                <option value="10">10px</option>
+                <option value="20">20px</option>
+            </select>
+            <button id="clear-canvas" class="tool-button">🗑️</button>
+        </div>
+    </div>
+    
+    <!-- Profile Screen -->
+    <div class="container profile-screen" id="profile-screen">
+        <div class="profile-form">
+            <h1>Profile</h1>
+            <div class="avatar-preview">
+                <img id="avatar-preview" src="" alt="Avatar">
+            </div>
+            <input type="file" id="avatar-upload" accept="image/*">
+            <input type="text" id="profile-username" placeholder="Username">
+            <button id="save-profile">Save Profile</button>
+            <button id="back-to-lobby">Back to Lobby</button>
+        </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="script.js"></script>
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        // Game State
+        let currentUser = null;
+        let currentLobbyId = null;
+        let currentLobbyUnsubscribe = null;
+        let isDrawing = false;
+        let timerInterval = null;
+
+        // DOM Elements
+        const authScreen = document.getElementById('auth-screen');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const loginButton = document.getElementById('login-button');
+        const signupButton = document.getElementById('signup-button');
+        const switchToSignup = document.getElementById('switch-to-signup');
+        const switchToLogin = document.getElementById('switch-to-login');
+        
+        const lobbyScreen = document.getElementById('lobby-screen');
+        const lobbyList = document.getElementById('lobby-list');
+        const createLobbyButton = document.getElementById('create-lobby-button');
+        const profileButton = document.getElementById('profile-button');
+        const logoutButton = document.getElementById('logout-button');
+        
+        const gameScreen = document.getElementById('game-screen');
+        const drawingCanvas = document.getElementById('drawing-canvas');
+        const ctx = drawingCanvas.getContext('2d');
+        const guessInput = document.getElementById('guess-input');
+        const submitGuess = document.getElementById('submit-guess');
+        const wordDisplay = document.getElementById('word-display');
+        const playersList = document.getElementById('players-list');
+        const currentRound = document.getElementById('current-round');
+        const totalRounds = document.getElementById('total-rounds');
+        const timerDisplay = document.getElementById('timer');
+        const messageArea = document.getElementById('message-area');
+        const toolbar = document.getElementById('toolbar');
+        const colorPicker = document.getElementById('color-picker');
+        const sizePicker = document.getElementById('size-picker');
+        const clearCanvas = document.getElementById('clear-canvas');
+        
+        const profileScreen = document.getElementById('profile-screen');
+        const avatarPreview = document.getElementById('avatar-preview');
+        const avatarUpload = document.getElementById('avatar-upload');
+        const profileUsername = document.getElementById('profile-username');
+        const saveProfile = document.getElementById('save-profile');
+        const backToLobby = document.getElementById('back-to-lobby');
+
+        // Auth Functions
+        function switchToSignupForm() {
+            loginForm.style.display = 'none';
+            signupForm.style.display = 'block';
+        }
+
+        function switchToLoginForm() {
+            signupForm.style.display = 'none';
+            loginForm.style.display = 'block';
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function handleSignup() {
+            const username = document.getElementById('signup-username').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                await db.collection('users').doc(userCredential.user.uid).set({
+                    username: username,
+                    avatar: '',
+                    wins: 0,
+                    gamesPlayed: 0
+                });
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                if (currentLobbyUnsubscribe) {
+                    currentLobbyUnsubscribe();
+                    currentLobbyUnsubscribe = null;
+                }
+                
+                if (currentLobbyId) {
+                    await leaveLobby(currentLobbyId);
+                    currentLobbyId = null;
+                }
+                
+                await auth.signOut();
+                showAuthScreen();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        // Lobby Functions
+        async function createLobby() {
+            try {
+                const lobbyRef = await db.collection('lobbies').add({
+                    host: currentUser.uid,
+                    players: [currentUser.uid],
+                    maxPlayers: 8,
+                    status: 'waiting',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    currentRound: 0,
+                    totalRounds: 5,
+                    currentWord: '',
+                    currentDrawer: '',
+                    currentGuesses: {},
+                    scores: {}
+                });
+                
+                currentLobbyId = lobbyRef.id;
+                setupLobbyListener(currentLobbyId);
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function joinLobby(lobbyId) {
+            try {
+                const lobbyRef = db.collection('lobbies').doc(lobbyId);
+                
+                await db.runTransaction(async (transaction) => {
+                    const lobbyDoc = await transaction.get(lobbyRef);
+                    if (!lobbyDoc.exists) throw new Error("Lobby doesn't exist");
+                    
+                    const lobbyData = lobbyDoc.data();
+                    if (lobbyData.players.includes(currentUser.uid)) return;
+                    if (lobbyData.players.length >= lobbyData.maxPlayers) throw new Error("Lobby is full");
+                    if (lobbyData.status !== 'waiting') throw new Error("Game has already started");
+                    
+                    transaction.update(lobbyRef, {
+                        players: [...lobbyData.players, currentUser.uid]
+                    });
+                });
+                
+                currentLobbyId = lobbyId;
+                setupLobbyListener(lobbyId);
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function leaveLobby(lobbyId) {
+            try {
+                const lobbyRef = db.collection('lobbies').doc(lobbyId);
+                
+                await db.runTransaction(async (transaction) => {
+                    const lobbyDoc = await transaction.get(lobbyRef);
+                    if (!lobbyDoc.exists) return;
+                    
+                    const lobbyData = lobbyDoc.data();
+                    const updatedPlayers = lobbyData.players.filter(uid => uid !== currentUser.uid);
+                    
+                    if (updatedPlayers.length === 0) {
+                        // Last player leaving - delete the lobby
+                        transaction.delete(lobbyRef);
+                    } else {
+                        // Update players list
+                        const updates = {
+                            players: updatedPlayers
+                        };
+                        
+                        // If host is leaving, assign new host
+                        if (lobbyData.host === currentUser.uid) {
+                            updates.host = updatedPlayers[0];
+                        }
+                        
+                        transaction.update(lobbyRef, updates);
+                    }
+                });
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function startGame(lobbyId) {
+            try {
+                const lobbyRef = db.collection('lobbies').doc(lobbyId);
+                const words = ['apple', 'banana', 'car', 'dog', 'house']; // Simple word list
+                
+                await lobbyRef.update({
+                    status: 'playing',
+                    words: words,
+                    currentRound: 1,
+                    currentDrawer: '', // Will be set in startRound
+                    currentWord: '',
+                    currentGuesses: {},
+                    scores: {}
+                });
+                
+                await startRound(lobbyId, 1);
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function startRound(lobbyId, roundNumber) {
+            try {
+                const lobbyRef = db.collection('lobbies').doc(lobbyId);
+                
+                await db.runTransaction(async (transaction) => {
+                    const lobbyDoc = await transaction.get(lobbyRef);
+                    const lobbyData = lobbyDoc.data();
+                    
+                    // Select drawer (round-robin)
+                    const drawerIndex = (roundNumber - 1) % lobbyData.players.length;
+                    const drawerId = lobbyData.players[drawerIndex];
+                    
+                    // Select word
+                    const word = lobbyData.words[roundNumber - 1];
+                    
+                    transaction.update(lobbyRef, {
+                        currentRound: roundNumber,
+                        currentDrawer: drawerId,
+                        currentWord: word,
+                        currentGuesses: {},
+                        drawingData: [],
+                        roundStartTime: firebase.firestore.FieldValue.serverTimestamp(),
+                        roundEndTime: null
+                    });
+                });
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        function setupLobbyListener(lobbyId) {
+            if (currentLobbyUnsubscribe) {
+                currentLobbyUnsubscribe();
+            }
+            
+            currentLobbyUnsubscribe = db.collection('lobbies').doc(lobbyId).onSnapshot((doc) => {
+                if (!doc.exists) {
+                    // Lobby was deleted
+                    showLobbyScreen();
+                    return;
+                }
+                
+                const lobbyData = doc.data();
+                
+                if (lobbyData.status === 'waiting') {
+                    showLobbyWaitingScreen(lobbyData);
+                } else if (lobbyData.status === 'playing') {
+                    showGameScreen(lobbyData);
+                }
+            });
+        }
+
+        function renderLobbyList() {
+            lobbyList.innerHTML = '';
+            
+            db.collection('lobbies')
+                .where('status', '==', 'waiting')
+                .onSnapshot((snapshot) => {
+                    snapshot.forEach((doc) => {
+                        const lobby = doc.data();
+                        const lobbyElement = document.createElement('div');
+                        lobbyElement.className = 'lobby-card';
+                        lobbyElement.innerHTML = `
+                            <h3>Lobby ${doc.id.substring(0, 6)}</h3>
+                            <p>Players: ${lobby.players.length}/${lobby.maxPlayers}</p>
+                            <button onclick="joinLobby('${doc.id}')">Join</button>
+                        `;
+                        lobbyList.appendChild(lobbyElement);
+                    });
+                });
+        }
+
+        // Game Functions
+        function setupCanvas() {
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#000000';
+            
+            drawingCanvas.addEventListener('mousedown', startDrawing);
+            drawingCanvas.addEventListener('mousemove', draw);
+            drawingCanvas.addEventListener('mouseup', stopDrawing);
+            drawingCanvas.addEventListener('mouseout', stopDrawing);
+            
+            colorPicker.addEventListener('change', (e) => {
+                ctx.strokeStyle = e.target.value;
+            });
+            
+            sizePicker.addEventListener('change', (e) => {
+                ctx.lineWidth = parseInt(e.target.value);
+            });
+            
+            clearCanvas.addEventListener('click', () => {
+                ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                if (currentLobbyId && currentUser.uid === currentLobby.currentDrawer) {
+                    db.collection('lobbies').doc(currentLobbyId).update({
+                        drawingData: []
+                    });
+                }
+            });
+        }
+
+        function startDrawing(e) {
+            if (currentLobby.currentDrawer !== currentUser.uid) return;
+            
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+            draw(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing || currentLobby.currentDrawer !== currentUser.uid) return;
+            
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            
+            // Send drawing data to server
+            if (currentLobbyId) {
+                db.collection('lobbies').doc(currentLobbyId).update({
+                    drawingData: firebase.firestore.FieldValue.arrayUnion({
+                        x: e.offsetX,
+                        y: e.offsetY,
+                        color: ctx.strokeStyle,
+                        width: ctx.lineWidth,
+                        type: 'draw'
+                    })
+                });
+            }
+        }
+
+        function stopDrawing() {
+            if (!isDrawing) return;
+            
+            isDrawing = false;
+            ctx.beginPath();
+            
+            // Send end drawing signal
+            if (currentLobbyId && currentLobby.currentDrawer === currentUser.uid) {
+                db.collection('lobbies').doc(currentLobbyId).update({
+                    drawingData: firebase.firestore.FieldValue.arrayUnion({
+                        type: 'end'
+                    })
+                });
+            }
+        }
+
+        function renderDrawing(drawingData) {
+            ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+            
+            drawingData.forEach((action) => {
+                if (action.type === 'draw') {
+                    ctx.strokeStyle = action.color;
+                    ctx.lineWidth = action.width;
+                    ctx.lineTo(action.x, action.y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(action.x, action.y);
+                } else if (action.type === 'end') {
+                    ctx.beginPath();
+                }
+            });
+        }
+
+        async function submitGuessHandler() {
+            const guess = guessInput.value.trim();
+            if (!guess || !currentLobbyId) return;
+            
+            try {
+                const lobbyRef = db.collection('lobbies').doc(currentLobbyId);
+                
+                await db.runTransaction(async (transaction) => {
+                    const lobbyDoc = await transaction.get(lobbyRef);
+                    const lobbyData = lobbyDoc.data();
+                    
+                    if (lobbyData.currentDrawer === currentUser.uid) {
+                        throw new Error("You're the drawer, you can't guess!");
+                    }
+                    
+                    if (lobbyData.currentGuesses[currentUser.uid]) {
+                        throw new Error("You've already guessed!");
+                    }
+                    
+                    const isCorrect = guess.toLowerCase() === lobbyData.currentWord.toLowerCase();
+                    
+                    const guessesUpdate = {
+                        [`currentGuesses.${currentUser.uid}`]: {
+                            guess: guess,
+                            isCorrect: isCorrect,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        }
+                    };
+                    
+                    // Update scores if correct
+                    const scoresUpdate = {};
+                    if (isCorrect) {
+                        const timeTaken = (new Date() - lobbyData.roundStartTime.toDate()) / 1000;
+                        const points = Math.max(10, 100 - Math.floor(timeTaken / 5));
+                        
+                        scoresUpdate[`scores.${currentUser.uid}`] = (lobbyData.scores[currentUser.uid] || 0) + points;
+                        scoresUpdate[`scores.${lobbyData.currentDrawer}`] = 
+                            (lobbyData.scores[lobbyData.currentDrawer] || 0) + (points * 0.5); // Drawer gets half points
+                    }
+                    
+                    transaction.update(lobbyRef, {
+                        ...guessesUpdate,
+                        ...scoresUpdate
+                    });
+                });
+                
+                guessInput.value = '';
+                
+                if (isCorrect) {
+                    messageArea.textContent = 'Correct!';
+                } else {
+                    messageArea.textContent = 'Wrong guess, try again!';
+                }
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        function updatePlayerList(players, scores) {
+            playersList.innerHTML = '';
+            
+            Promise.all(players.map(async (playerId) => {
+                const userDoc = await db.collection('users').doc(playerId).get();
+                return {
+                    id: playerId,
+                    data: userDoc.data()
+                };
+            })).then((playersData) => {
+                playersData.forEach((player) => {
+                    const playerElement = document.createElement('div');
+                    playerElement.className = 'player-item';
+                    
+                    const avatarSrc = player.data.avatar || 'https://via.placeholder.com/40';
+                    
+                    playerElement.innerHTML = `
+                        <div class="player-avatar">
+                            <img src="${avatarSrc}" alt="${player.data.username}">
+                        </div>
+                        <div class="player-info">
+                            ${player.data.username} ${currentLobby.currentDrawer === player.id ? '🎨' : ''}
+                        </div>
+                        <div class="player-score">
+                            ${scores[player.id] || 0} pts
+                        </div>
+                    `;
+                    
+                    playersList.appendChild(playerElement);
+                });
+            });
+        }
+
+        function startTimer(seconds) {
+            let timeLeft = seconds;
+            timerDisplay.textContent = timeLeft;
+            
+            if (timerInterval) clearInterval(timerInterval);
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endRound();
+                }
+            }, 1000);
+        }
+
+        async function endRound() {
+            try {
+                const lobbyRef = db.collection('lobbies').doc(currentLobbyId);
+                const lobbyDoc = await lobbyRef.get();
+                const lobbyData = lobbyDoc.data();
+                
+                if (lobbyData.currentRound >= lobbyData.totalRounds) {
+                    // Game over
+                    await lobbyRef.update({
+                        status: 'finished',
+                        roundEndTime: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } else {
+                    // Next round
+                    await startRound(currentLobbyId, lobbyData.currentRound + 1);
+                }
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        // Profile Functions
+        async function loadProfile() {
+            try {
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    profileUsername.value = userData.username || '';
+                    avatarPreview.src = userData.avatar || 'https://via.placeholder.com/100';
+                }
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function saveProfileHandler() {
+            try {
+                const updates = {
+                    username: profileUsername.value
+                };
+                
+                // Handle avatar upload
+                const file = avatarUpload.files[0];
+                if (file) {
+                    const storageRef = storage.ref(`avatars/${currentUser.uid}/${file.name}`);
+                    await storageRef.put(file);
+                    const downloadURL = await storageRef.getDownloadURL();
+                    updates.avatar = downloadURL;
+                }
+                
+                await db.collection('users').doc(currentUser.uid).update(updates);
+                showLobbyScreen();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        // Screen Management
+        function showAuthScreen() {
+            authScreen.style.display = 'flex';
+            lobbyScreen.style.display = 'none';
+            gameScreen.style.display = 'none';
+            profileScreen.style.display = 'none';
+        }
+
+        function showLobbyScreen() {
+            authScreen.style.display = 'none';
+            lobbyScreen.style.display = 'block';
+            gameScreen.style.display = 'none';
+            profileScreen.style.display = 'none';
+            
+            renderLobbyList();
+        }
+
+        function showLobbyWaitingScreen(lobbyData) {
+            authScreen.style.display = 'none';
+            lobbyScreen.style.display = 'block';
+            gameScreen.style.display = 'none';
+            profileScreen.style.display = 'none';
+            
+            // Show lobby waiting screen with current players
+            lobbyList.innerHTML = `
+                <div class="lobby-card">
+                    <h3>Your Lobby (${lobbyData.players.length}/${lobbyData.maxPlayers} players)</h3>
+                    <div id="lobby-players-list"></div>
+                    ${lobbyData.host === currentUser.uid ? 
+                        '<button id="start-game-button">Start Game</button>' : 
+                        '<p>Waiting for host to start the game...</p>'}
+                </div>
+            `;
+            
+            if (lobbyData.host === currentUser.uid) {
+                document.getElementById('start-game-button').addEventListener('click', () => {
+                    startGame(currentLobbyId);
+                });
+            }
+            
+            // Show players in the lobby
+            const playersList = document.getElementById('lobby-players-list');
+            playersList.innerHTML = '';
+            
+            Promise.all(lobbyData.players.map(async (playerId) => {
+                const userDoc = await db.collection('users').doc(playerId).get();
+                return userDoc.data().username;
+            })).then((usernames) => {
+                usernames.forEach((username) => {
+                    const playerElement = document.createElement('div');
+                    playerElement.textContent = username;
+                    playersList.appendChild(playerElement);
+                });
+            });
+        }
+
+        function showGameScreen(lobbyData) {
+            authScreen.style.display = 'none';
+            lobbyScreen.style.display = 'none';
+            gameScreen.style.display = 'block';
+            profileScreen.style.display = 'none';
+            
+            currentLobby = lobbyData;
+            
+            // Update game info
+            currentRound.textContent = lobbyData.currentRound;
+            totalRounds.textContent = lobbyData.totalRounds;
+            
+            // Show word if you're the drawer
+            if (lobbyData.currentDrawer === currentUser.uid) {
+                wordDisplay.textContent = `Draw: ${lobbyData.currentWord}`;
+                toolbar.style.display = 'flex';
+            } else {
+                wordDisplay.textContent = lobbyData.currentGuesses[currentUser.uid]?.isCorrect ? 
+                    `The word was: ${lobbyData.currentWord}` : 
+                    'Guess what the drawer is drawing!';
+                toolbar.style.display = 'none';
+            }
+            
+            // Update player list
+            updatePlayerList(lobbyData.players, lobbyData.scores || {});
+            
+            // Render drawing
+            renderDrawing(lobbyData.drawingData || []);
+            
+            // Start timer
+            if (lobbyData.roundStartTime) {
+                const roundStartTime = lobbyData.roundStartTime.toDate();
+                const timeElapsed = (new Date() - roundStartTime) / 1000;
+                const timeLeft = Math.max(0, 60 - Math.floor(timeElapsed)); // 60 seconds per round
+                startTimer(timeLeft);
+            }
+        }
+
+        function showProfileScreen() {
+            authScreen.style.display = 'none';
+            lobbyScreen.style.display = 'none';
+            gameScreen.style.display = 'none';
+            profileScreen.style.display = 'block';
+            
+            loadProfile();
+        }
+
+        // Event Listeners
+        switchToSignup.addEventListener('click', switchToSignupForm);
+        switchToLogin.addEventListener('click', switchToLoginForm);
+        loginButton.addEventListener('click', handleLogin);
+        signupButton.addEventListener('click', handleSignup);
+        logoutButton.addEventListener('click', handleLogout);
+        createLobbyButton.addEventListener('click', createLobby);
+        profileButton.addEventListener('click', showProfileScreen);
+        submitGuess.addEventListener('click', submitGuessHandler);
+        guessInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitGuessHandler();
+        });
+        saveProfile.addEventListener('click', saveProfileHandler);
+        backToLobby.addEventListener('click', showLobbyScreen);
+
+        // Initialize
+        function init() {
+            setupCanvas();
+            
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    currentUser = user;
+                    showLobbyScreen();
+                } else {
+                    currentUser = null;
+                    showAuthScreen();
+                }
+            });
+        }
+
+        // Start the app
+        init();
+
+        // Make joinLobby available globally for buttons in dynamically created HTML
+        window.joinLobby = joinLobby;
+    </script>
 </body>
 </html>
